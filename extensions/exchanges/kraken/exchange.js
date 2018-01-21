@@ -14,7 +14,7 @@ module.exports = function container(get, set, clear) {
 
   var public_client, authed_client
   // var recoverableErrors = new RegExp(/(ESOCKETTIMEDOUT|ETIMEDOUT|ECONNRESET|ECONNREFUSED|ENOTFOUND|API:Invalid nonce|API:Rate limit exceeded|between Cloudflare and the origin web server)/)
-  var recoverableErrors = new RegExp(/(ESOCKETTIMEDOUT|ETIMEDOUT|ECONNRESET|ECONNREFUSED|ENOTFOUND|API:Invalid nonce|between Cloudflare and the origin web server|The web server reported a gateway time\-out|The web server reported a bad gateway|525\: SSL handshake failed|Service\:Unavailable)/)
+  var recoverableErrors = new RegExp(/(ESOCKETTIMEDOUT|ETIMEDOUT|ECONNRESET|ECONNREFUSED|ENOTFOUND|API:Invalid nonce|between Cloudflare and the origin web server|The web server reported a gateway time\-out|The web server reported a bad gateway|525\: SSL handshake failed|Service\:Unavailable|api.kraken.com \| 522\:)/)
   var silencedRecoverableErrors = new RegExp(/(ESOCKETTIMEDOUT|ETIMEDOUT)/)
 
   function publicClient() {
@@ -52,10 +52,11 @@ module.exports = function container(get, set, clear) {
   }
 
   function retry(method, args, error) {
+    let timeout, errorMsg
     if (error.message.match(/API:Rate limit exceeded/)) {
-      var timeout = 10000
+      timeout = 10000
     } else {
-      var timeout = 150
+      timeout = 150
     }
 
     // silence common timeout errors
@@ -75,6 +76,10 @@ module.exports = function container(get, set, clear) {
       else if (error.message.match(/Service\:Unavailable/)) {
         errorMsg = 'Service Unavailable'
       }
+      else if (error.message.match(/api.kraken.com \| 522\:/)) {
+        errorMsg = 'Generic 522 Server error'
+      }
+
       else {
         errorMsg = error
       }
@@ -221,7 +226,7 @@ module.exports = function container(get, set, clear) {
           return cb(data.error.join(','))
         }
         if (so.debug) {
-          console.log("cancelOrder")
+          console.log('\nFunction: cancelOrder')
           console.log(data)
         }
         cb(error)
@@ -245,7 +250,7 @@ module.exports = function container(get, set, clear) {
         params.price = opts.price
       }
       if (so.debug) {
-        console.log("trade")
+        console.log('\nFunction: trade')
         console.log(params)
       }
       client.api('AddOrder', params, function(error, data) {
@@ -267,11 +272,11 @@ module.exports = function container(get, set, clear) {
         }
 
         if (so.debug) {
-          console.log("Data")
+          console.log('\nData:')
           console.log(data)
-          console.log("Order")
+          console.log('\nOrder:')
           console.log(order)
-          console.log("Error")
+          console.log('\nError:')
           console.log(error)
         }
 
@@ -329,7 +334,7 @@ module.exports = function container(get, set, clear) {
         }
         var orderData = data.result[params.txid]
         if (so.debug) {
-          console.log("QueryOrders")
+          console.log('\nfunction: QueryOrders')
           console.log(orderData)
         }
 

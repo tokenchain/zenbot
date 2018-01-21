@@ -196,6 +196,9 @@ c.notifiers.discord = {}
 c.notifiers.discord.on = false // false discord disabled; true discord enabled (key should be correct)
 c.notifiers.discord.id = 'YOUR-WEBHOOK-ID'
 c.notifiers.discord.token = 'YOUR-WEBHOOK-TOKEN'
+c.notifiers.discord.username = '' // default "Zenbot"
+c.notifiers.discord.avatar_url = ''
+c.notifiers.discord.color = null // color as a decimal
 // end discord configs
 
 // prowl configs
@@ -210,6 +213,21 @@ c.notifiers.textbelt.on = false // false textbelt disabled; true textbelt enable
 c.notifiers.textbelt.phone = '3121234567'
 c.notifiers.textbelt.key = 'textbelt'
 // end textbelt configs
+
+// pushover configs
+c.notifiers.pushover = {}
+c.notifiers.pushover.on = false // false pushover disabled; true pushover enabled (keys should be correct)
+c.notifiers.pushover.token = 'YOUR-API-TOKEN' // create application and supply the token here
+c.notifiers.pushover.user = 'YOUR-USER-KEY' // this is your own user's key (not application related)
+c.notifiers.pushover.priority = '0' // choose a priority to send zenbot messages with, see https://pushover.net/api#priority
+// end pushover configs
+
+// telegram configs
+c.notifiers.telegram = {};
+c.notifiers.telegram.on = false // false telegram disabled; true telegram enabled (key should be correct)
+c.notifiers.telegram.bot_token = 'YOUR-BOT-TOKEN'
+c.notifiers.telegram.chat_id = 'YOUR-CHAT-ID' // the id of the chat the messages should be send in
+// end telegram configs
 
 // output
 c.output  = {}
