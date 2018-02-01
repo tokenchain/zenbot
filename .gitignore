@@ -34,3 +34,5 @@ dist/*
 *.iml
 simulations/sim_*.json
 
+
+yarn\.lock
