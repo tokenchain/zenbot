@@ -1,17 +1,17 @@
 var tb = require('timebucket')
   , minimist = require('minimist')
-  , n = require('numbro')
   , fs = require('fs')
   , path = require('path')
   , spawn = require('child_process').spawn
   , moment = require('moment')
+  // eslint-disable-next-line no-unused-vars
   , colors = require('colors')
   , analytics = require('forex.analytics')
   , ProgressBar = require('progress')
   , crypto = require('crypto')
   , objectifySelector = require('../lib/objectify-selector')
   , engineFactory = require('../lib/engine')
-  , trades = require('../db/trades')
+  , collectionService = require('../lib/services/collection-service')
 
 var fa_defaultIndicators = [
   'CCI',
@@ -77,16 +77,22 @@ module.exports = function (program, conf) {
       var s = {options: minimist(process.argv)}
       var so = s.options
       delete so._
+      if (cmd.conf) {
+        var overrides = require(path.resolve(process.cwd(), cmd.conf))
+        Object.keys(overrides).forEach(function (k) {
+          so[k] = overrides[k]
+        })
+      }
       Object.keys(conf).forEach(function (k) {
         if (typeof cmd[k] !== 'undefined') {
           so[k] = cmd[k]
         }
       })
-
+      var tradesCollection = collectionService(conf).getTrades()
       if (!so.days_test) { so.days_test = 0 }
       so.strategy = 'noop'
 
-      unknownIndicators = []
+      var unknownIndicators = []
       if (so.indicators) {
         so.indicators.split(',').forEach(function(indicator) {
           if (!fa_availableIndicators.includes(indicator))
@@ -117,12 +123,7 @@ module.exports = function (program, conf) {
       }
       so.selector = objectifySelector(selector || conf.selector)
       so.mode = 'train'
-      if (cmd.conf) {
-        var overrides = require(path.resolve(process.cwd(), cmd.conf))
-        Object.keys(overrides).forEach(function (k) {
-          so[k] = overrides[k]
-        })
-      }
+      
       var engine = engineFactory(s, conf)
 
       if (!so.min_periods) so.min_periods = 1
@@ -194,7 +195,7 @@ module.exports = function (program, conf) {
         var simulationResult = fs.readFileSync(simulationResultFile).toString()
         simulationResult = simulationResult.substr(simulationResult.length - 512)
 
-        result = {}
+        var result = {}
         if (simulationResult.match(endBalance)) { result.endBalance      = simulationResult.match(endBalance)[1] }
         if (simulationResult.match(buyHold))    { result.buyHold         = simulationResult.match(buyHold)[1] }
         if (simulationResult.match(vsBuyHold))  { result.vsBuyHold       = simulationResult.match(vsBuyHold)[1] }
@@ -300,7 +301,7 @@ module.exports = function (program, conf) {
           }
         )
 
-        return analytics.findStrategy(candlesticks, fa_getTrainOptions(so), function(strategy, fitness, generation) {
+        return analytics.findStrategy(candlesticks, fa_getTrainOptions(so), function(strategy, fitness/*, generation*/) {
           bar.tick({
             'fitness': fitness
           })
@@ -316,7 +317,6 @@ module.exports = function (program, conf) {
         }
         
         var option_keys = Object.keys(so)
-        var output_lines = []
         option_keys.sort(function (a, b) {
           if (a < b) return -1
           return 1
@@ -379,7 +379,7 @@ module.exports = function (program, conf) {
           if (!opts.query.time) opts.query.time = {}
           opts.query.time['$gte'] = query_start
         }
-        trades(conf).select(opts, function (err, trades) {
+        tradesCollection.find(opts.query).limit(opts.limit).sort(opts.sort).toArray(function (err, trades) {
           if (err) throw err
           if (!trades.length) {
             if (so.symmetrical && !reversing) {

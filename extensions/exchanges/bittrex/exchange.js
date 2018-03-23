@@ -1,6 +1,5 @@
 var bittrex_authed = require('node-bittrex-api'),
   bittrex_public = require('node-bittrex-api'),
-  moment = require('moment'),
   n = require('numbro')
 
 /**
@@ -12,10 +11,7 @@ module.exports = function bittrex(conf) {
   let shownWarning = false
   let fistRun = true
   let allowGetMarketCall=true
-  let tradeCache = []
   let marketRefresh = 15000
-
-
 
   bittrex_authed.options({
     'apikey' : conf.bittrex.key.trim(),
@@ -176,7 +172,6 @@ module.exports = function bittrex(conf) {
                   }
                 }
                 fistRun = false
-                tradeCache = trades
                 allowGetMarketCall = false
                 setTimeout(()=>{allowGetMarketCall = true},marketRefresh)
                 //make sure all times come out sorted correctly.  there is a chance they can appear in the array out of order otherwise.
@@ -221,7 +216,6 @@ module.exports = function bittrex(conf) {
             allowGetMarketCall = false
             
             
-            tradeCache = trades
             setTimeout(()=>{allowGetMarketCall = true},marketRefresh)
             //Sorting at this point may be redundant.
             trades = trades.sort((a, b) => {
@@ -276,6 +270,38 @@ module.exports = function bittrex(conf) {
           cb(null, balance)
         }
       
+      })
+    },
+
+    getOrderBook: function (opts, cb) {
+      var args = {
+        market: joinProduct(opts.product_id),
+        type: 'both',
+        depth: 10
+      }
+      bittrex_public.getorderbook(args, function( data ) {
+        if (typeof data !== 'object') {
+          console.log('bittrex API (getorderbook) had an abnormal response, quitting.')
+          return cb(null, [])
+        }
+
+        if(!data.success) {
+          if (data.message && data.message.match(recoverableErrors)) {
+            return retry('getOrderBook', args, data.message)
+          }
+          console.log(data.message)
+          return cb(null, [])
+        }
+        if(typeof data.result.buy[0].Rate === 'undefined') {
+          console.log(data.message)
+          return cb(null, [])
+        }
+        cb(null, {
+          buyOrderRate: data.result.buy[0].Rate,
+          buyOrderAmount: data.result.buy[0].Quantity,
+          sellOrderRate: data.result.sell[0].Rate,
+          sellOrderAmount: data.result.sell[0].Quantity
+        })
       })
     },
 

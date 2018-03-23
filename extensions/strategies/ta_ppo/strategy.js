@@ -2,6 +2,7 @@ var z = require('zero-fill')
   , n = require('numbro')
   , rsi = require('../../../lib/rsi')
   , ta_ppo = require('../../../lib/ta_ppo')
+  , Phenotypes = require('../../../lib/phenotype')
 
 module.exports = {
   name: 'ta_ppo',
@@ -9,6 +10,7 @@ module.exports = {
 
   getOptions: function () {
     this.option('period', 'period length eg 10m', String, '10m')
+    this.option('min_periods', 'min. number of history periods', Number, 52)
     this.option('ema_short_period', 'number of periods for the shorter EMA', Number, 12)
     this.option('ema_long_period', 'number of periods for the longer EMA', Number, 26)
     this.option('signal_period', 'number of periods for the signal EMA', Number, 9)
@@ -81,6 +83,26 @@ module.exports = {
     }
 
     return cols
+  },
+
+  phenotypes: {
+    period_length: Phenotypes.RangePeriod(1, 120, 'm'),
+    min_periods: Phenotypes.Range(1, 104),
+    markdown_buy_pct: Phenotypes.RangeFloat(-1, 5),
+    markup_sell_pct: Phenotypes.RangeFloat(-1, 5),
+    order_type: Phenotypes.ListOption(['maker', 'taker']),
+    sell_stop_pct: Phenotypes.Range0(1, 50),
+    buy_stop_pct: Phenotypes.Range0(1, 50),
+    profit_stop_enable_pct: Phenotypes.Range0(1, 20),
+    profit_stop_pct: Phenotypes.Range(1,20),
+
+    // have to be minimum 2 because talib will throw an "TA_BAD_PARAM" error
+    ema_short_period: Phenotypes.Range(2, 20),
+    ema_long_period: Phenotypes.Range(20, 100),
+    signal_period: Phenotypes.Range(1, 20),
+    ma_type: Phenotypes.RangeMaType(),
+    overbought_rsi_periods: Phenotypes.Range(1, 50),
+    overbought_rsi: Phenotypes.Range(20, 100)
   }
 }
 

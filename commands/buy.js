@@ -1,5 +1,6 @@
 var minimist = require('minimist')
   , n = require('numbro')
+  // eslint-disable-next-line no-unused-vars
   , colors = require('colors')
   , objectifySelector = require('../lib/objectify-selector')
   , engineFactory = require('../lib/engine')
@@ -30,7 +31,7 @@ module.exports = function (program, conf) {
       so.buy_pct = cmd.pct
       so.selector = objectifySelector(selector || conf.selector)
       var order_types = ['maker', 'taker']
-      if (!(so.order_type in order_types) || !so.order_type) {
+      if (!order_types.includes(so.order_type)) {
         so.order_type = 'maker'
       }
       so.mode = 'live'

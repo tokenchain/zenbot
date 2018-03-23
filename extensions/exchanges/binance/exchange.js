@@ -1,9 +1,8 @@
 const ccxt = require('ccxt')
   , path = require('path')
+  // eslint-disable-next-line no-unused-vars
   , colors = require('colors')
-  , moment = require('moment')
   , _ = require('lodash')
-  , n = require('numbro')
 
 module.exports = function bittrex (conf) {
   var public_client, authed_client
@@ -63,10 +62,10 @@ module.exports = function bittrex (conf) {
 
       var args = {}
       if (opts.from) {
-        args.endTime = opts.from
+        args.startTime = opts.from
       }
       if (opts.to) {
-        args.startTime = opts.to
+        args.endTime = opts.to
       }
       if (args.startTime && !args.endTime) {
         // add 12 hours
@@ -151,9 +150,9 @@ module.exports = function bittrex (conf) {
       }, function(err){
         // match error against string:
         // "binance {"code":-2011,"msg":"UNKNOWN_ORDER"}"
-        
+
         if (err) {
-          // decide if this error is allowed for a retry 
+          // decide if this error is allowed for a retry
 
           if (err.message && err.message.match(new RegExp(/-2011|UNKNOWN_ORDER/))) {
             console.error(('\ncancelOrder retry - unknown Order: ' + JSON.stringify(opts) + ' - ' + err).cyan)
@@ -208,10 +207,12 @@ module.exports = function bittrex (conf) {
         cb(null, order)
       }).catch(function (error) {
         console.error('An error occurred', error)
-        
+
         // decide if this error is allowed for a retry:
         // {"code":-1013,"msg":"Filter failure: MIN_NOTIONAL"}
-        if (error.message.match(new RegExp(/-1013|MIN_NOTIONAL/))) {
+        // {"code":-2010,"msg":"Account has insufficient balance for requested action"}
+
+        if (error.message.match(new RegExp(/-1013|MIN_NOTIONAL|-2010/))) {
           return cb(null, {
             status: 'rejected',
             reject_reason: 'balance'
@@ -262,10 +263,12 @@ module.exports = function bittrex (conf) {
         cb(null, order)
       }).catch(function (error) {
         console.error('An error occurred', error)
-        
+
         // decide if this error is allowed for a retry:
         // {"code":-1013,"msg":"Filter failure: MIN_NOTIONAL"}
-        if (error.message.match(new RegExp(/-1013|MIN_NOTIONAL/))) {
+        // {"code":-2010,"msg":"Account has insufficient balance for requested action"}
+
+        if (error.message.match(new RegExp(/-1013|MIN_NOTIONAL|-2010/))) {
           return cb(null, {
             status: 'rejected',
             reject_reason: 'balance'

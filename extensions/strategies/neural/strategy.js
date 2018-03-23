@@ -1,11 +1,11 @@
-var convnetjs = require('convnetjs')
-var z = require('zero-fill')
-var stats = require('stats-lite')
-var n = require('numbro')
-var math = require('mathjs')
+let convnetjs = require('convnetjs')
+  , z = require('zero-fill')
+  , n = require('numbro')
+  , math = require('mathjs')
+  , ema = require('../../../lib/ema')
+  , Phenotypes = require('../../../lib/phenotype')
 const cluster = require('cluster')
-const numCPUs = require('os').cpus().length
-var ema = require('../../../lib/ema')
+
 // the below line starts you at 0 threads
 global.forks = 0
 // the below line is for calculating the last mean vs the now mean.
@@ -27,8 +27,7 @@ module.exports = {
     this.option('threads', 'Number of processing threads you\'d like to run (best for sim)', Number, 1)
     this.option('learns', 'Number of times to \'learn\' the neural network with past data', Number, 2)
   },
-  calculate: function (s) {
-    calculated = null
+  calculate: function () {
   },
   onPeriod: function (s, cb) {
     ema(s, 'neural', s.options.neural)
@@ -69,7 +68,7 @@ module.exports = {
               var real_value = [my_data[i + s.neural.neuralDepth]]
               var x = new convnetjs.Vol(data)
               s.neural.trainer.train(x, real_value)
-              var predicted_values = s.neural.net.forward(x)
+              s.neural.net.forward(x)
             }
           }
         }
@@ -106,12 +105,34 @@ module.exports = {
       cb()
     }
   },
-  onReport: function (s) {
-    cols = []
+  onReport: function () {
+    var cols = []
     cols.push(z(8, n(global.mean).format('0.000000000'), ' ')[global.meanp > global.mean ? 'green' : 'red'])
     cols.push('    ')
     cols.push(z(8, n(global.meanp).format('0.000000000'), ' ')[global.meanp > global.mean ? 'green' : 'red'])
     return cols
   },
+
+  phenotypes: {
+    // -- common
+    period_length: Phenotypes.RangePeriod(1, 120, 'm'),
+    min_periods: Phenotypes.Range(1, 200),
+    markdown_buy_pct: Phenotypes.RangeFloat(-1, 5),
+    markup_sell_pct: Phenotypes.RangeFloat(-1, 5),
+    order_type: Phenotypes.ListOption(['maker', 'taker']),
+    sell_stop_pct: Phenotypes.Range0(1, 50),
+    buy_stop_pct: Phenotypes.Range0(1, 50),
+    profit_stop_enable_pct: Phenotypes.Range0(1, 20),
+    profit_stop_pct: Phenotypes.Range(1,20),
+
+    // -- strategy
+    neurons_1: Phenotypes.Range(1, 200),
+    activation_1_type: Phenotypes.ListOption(['sigmoid', 'tanh', 'relu']),
+    depth: Phenotypes.Range(1, 100),
+    min_predict: Phenotypes.Range(1, 100),
+    momentum: Phenotypes.Range(0, 100),
+    decay: Phenotypes.Range(1, 10),
+    learns: Phenotypes.Range(1, 200)
+  }
 }
 

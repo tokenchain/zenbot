@@ -1,5 +1,6 @@
 var minimist = require('minimist')
   , n = require('numbro')
+  // eslint-disable-next-line no-unused-vars
   , colors = require('colors')
   , moment = require('moment')
   , engineFactory = require('../lib/engine')
@@ -16,7 +17,6 @@ module.exports = function (program, conf) {
     .action(function (selector, cmd) {
       var s = {options: minimist(process.argv)}
       s.selector = objectifySelector(selector || conf.selector)
-      s.exchange = require(`../extensions/exchanges/${s.selector.exchange_id}/exchange`)(conf)
       s.product_id = s.selector.product_id
       s.asset = s.selector.asset
       s.currency = s.selector.currency
@@ -31,10 +31,11 @@ module.exports = function (program, conf) {
       })
       so.selector = s.selector
       so.debug = cmd.debug
+      so.mode = 'live'
       var engine = engineFactory(s, conf)
       function balance () {
         s.exchange.getBalance(s, function (err, balance) {
-          if (err) return cb(err)
+          if (err) throw err
           s.exchange.getQuote(s, function (err, quote) {
             if (err) throw err
             

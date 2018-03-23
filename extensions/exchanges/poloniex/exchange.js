@@ -1,15 +1,15 @@
 var Poloniex = require('poloniex.js')
-  , path = require('path')
   , moment = require('moment')
   , n = require('numbro')
+  // eslint-disable-next-line no-unused-vars
   , colors = require('colors')
 
 module.exports = function container (conf) {
 
   var public_client, authed_client
 
-  function publicClient (product_id) {
-    if (!public_client) public_client = new Poloniex(conf.poloniex.key, conf.poloniex.secret)
+  function publicClient (/*product_id*/) {
+    if (!public_client) public_client = new Poloniex()
     return public_client
   }
 
@@ -115,6 +115,30 @@ module.exports = function container (conf) {
       })
     },
 
+    getOrderBook: function (opts, cb) {
+      var client = publicClient()
+      var params = {
+        currencyPair: joinProduct(opts.product_id),
+        depth: 10
+      }
+      client._public('returnOrderBook', params, function (err,  data) {
+        if (typeof data !== 'object') {
+          return cb(null, [])
+        }
+        if (data.error) {
+          console.error('getOrderBook error:')
+          console.error(data)
+          return retry('getOrderBook', params)
+        }
+        cb(null, {
+          buyOrderRate: data.bids[0][0],
+          buyOrderAmount: data.bids[0][1],
+          sellOrderRate: data.asks[0][0],
+          sellOrderAmount: data.asks[0][1]
+        })
+      })
+    },
+
     getQuote: function (opts, cb) {
       var args = [].slice.call(arguments)
       var client = publicClient()
@@ -188,6 +212,8 @@ module.exports = function container (conf) {
           order.status = 'rejected'
           order.reject_reason = 'balance'
           return cb(null, order)
+        } else if (result && result.error && result.error.match(/^Nonce must be greater/)) {
+            return retry('trade', args)
         }
         if (!err && result.error) {
           err = new Error('unable to ' + type)
@@ -231,16 +257,15 @@ module.exports = function container (conf) {
             if (api_order.orderNumber == opts.order_id) active = true
           })
         }
-        if (!active) {
-          order.status = 'done'
-          order.done_at = new Date().getTime()
-          return cb(null, order)
-        }
         client.returnOrderTrades(opts.order_id, function (err, body) {
           if (typeof body === 'string' || !body) {
             return retry('getOrder', args)
           }
           if (err || body.error || !body.forEach) return cb(null, order)
+          if (body.length === 0 && !active) {
+            order.status = 'cancelled'
+            return cb(null, order)
+          }
           order.filled_size = '0'
           body.forEach(function (trade) {
             order.filled_size = n(order.filled_size).add(trade.amount).format('0.00000000')
